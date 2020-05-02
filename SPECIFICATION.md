@@ -22,10 +22,10 @@ so it is strongly recommended to always wait for the result.
     3. [Registration confirmation packets](#registration-confirmation-packets)
     4. [Authentication confirmation packets](#authentication-confirmation-packets)
 2. Authentication methods
-    0. [Anonymous](#anonymous)
-    1. [Credentials](#credentials)
-    2. [Token](#token)
-    3. [Ed25519 key](#ed25519)
+    1. [Anonymous](#anonymous)
+    2. [Credentials](#credentials)
+    3. [Token](#token)
+    4. [Ed25519 key](#ed25519)
 
 ### Service description packet
 
