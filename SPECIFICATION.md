@@ -25,7 +25,7 @@ so it is strongly recommended to always wait for the result.
     1. [Anonymous](#anonymous)
     2. [Credentials](#credentials)
     3. [Token](#token)
-    4. [Ed25519 key](#ed25519)
+    4. [TLS certificate](#tls)
 
 ### Service description packet
 
@@ -35,11 +35,10 @@ This method describes service, that the server is running.
 | Name                          | Type      | Description                                                                        |
 |-------------------------------|-----------|------------------------------------------------------------------------------------|
 | Magic                         | byte\[5\] | Contains constant string `CoRPC` (`43 6F 52 50 43`)                                |
-| Service name length           | uvarint   | Contains size of service name string                                               |
+| Service name length           | uint16    | Contains size of service name string                                               |
 | Service name                  | string    | Service name is a unique string that identifies this service                       |
 | Major                         | uint16    | Major version of the service                                                       |
 | Minor                         | uint16    | Minor version of the service                                                       |
-| Patch                         | uint16    | Patch version of the service                                                       |
 | Flags                         | uint16    | Field that contains bit-flags for service, see [Flags](#service-description-flags) |
 | Authentication methods length | byte      | Contains the amount of supported authentication methods                            |
 | Authentication methods        | byte[]    | Lists all available authentication methods, see [Methods](#authentication-methods) |
@@ -58,12 +57,12 @@ Bits are counted from least significant to most significant
 Custom methods must be added starting from `0xFF` and counting down, 
 as to not cause conflicts with methods, that may be introduced in the future.
 
-| Method ID | Name        | Authentication procedure        |
-|-----------|-------------|---------------------------------|
-| `0x00`    | Anonymous   | See [Anonymous](#anonymous)     |
-| `0x01`    | Credentials | See [Credentials](#credentials) |
-| `0x02`    | Token       | See [Token](#token)             |
-| `0x03`    | Ed25519 key | See [Ed25519](#ed25519)         |
+| Method ID | Name            | Authentication procedure           |
+|-----------|-----------------|------------------------------------|
+| `0x00`    | Anonymous       | See [Anonymous](#anonymous)        |
+| `0x01`    | Credentials     | See [Credentials](#credentials)    |
+| `0x02`    | Token           | See [Token](#token)                |
+| `0x03`    | TLS certificate | Only Ed25519 keys, see [TLS](#tls) |
 
 ### Authentication packet
 
@@ -114,28 +113,28 @@ Registration does not automatically authenticate user.
 
 Request (method specific data):
 
-| Name        | Type                       | Description                      |
-|-------------|----------------------------|----------------------------------|
-| Data length | uint16                     | Contains length of the data      |
-| Data        | Custom protobuf message    | Contains protobuf-encoded data   |
+| Name        | Type     | Description                                                                              |
+|-------------|----------|------------------------------------------------------------------------------------------|
+| Data length | uint16   | Length of the protobuf data                                                              |
+| Data        | Protobuf | Data for the registration, type of protobuf message is predefined in service description |
 
 Response (method specific data):
 
-| Name         | Type   | Description                       |
-|--------------|--------|-----------------------------------|
-| Token length | uint16 | Contains length of the token      |
-| Token        | byte[] | Contains the authentication token |
+| Name         | Type   | Description          |
+|--------------|--------|----------------------|
+| Token length | uint16 | Length of the token  |
+| Token        | byte[] | Authentication token |
 
 ###### Authentication
 
 Method specific data is as follows:
 
-| Name         | Type   | Description                       |
-|--------------|--------|-----------------------------------|
-| Token length | uint16 | Contains length of the token      |
-| Token        | byte[] | Contains the authentication token |
+| Name         | Type   | Description          |
+|--------------|--------|----------------------|
+| Token length | uint16 | Length of the token  |
+| Token        | byte[] | Authentication token |
 
-##### Ed25519
+##### TLS
 
 ###### Registration
 
@@ -147,26 +146,19 @@ Method specific data is as follows:
 | Data length  | uint16                  | Length of custom data                       |
 | Data         | Custom protobuf message | Additional application-specific information |
 
+Successful registration response must have this method specific data:
+
+| Name               | Type   | Description                   |
+|--------------------|--------|-------------------------------|
+| Certificate length | uint16 | Size of the certificate       |
+| Certificate        | byte[] | DER encoded X.509 certificate |
+
+- After registration, client must reconnect to the server in order to present new certificate.
+
 ###### Authentication
 
-Authentication request (method specific data):
-
-| Name                   | Type       | Description            |
-|------------------------|------------|------------------------|
-| Public key fingerprint | byte\[32\] | SHA256 hash of the key |
-
-Challenge bytes (raw data):
-
-| Name         | Type   | Description                     |
-|--------------|--------|---------------------------------|
-| Data length  | uint16 | Size of the challenge           |
-| Data         | byte[] | Bytes that the client must sign |
-
-Finalization (raw data):
-
-| Name         | Type       | Description                       |
-|--------------|------------|-----------------------------------|
-| Signature    | byte\[64\] | Signature for challenge bytes     |
+Authentication request doesn't have method specific data. 
+You must present TLS certificate to the server during handshake in order to successfully authenticate.
 
 ### Registration confirmation packets
 
